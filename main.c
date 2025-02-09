@@ -3,6 +3,7 @@
 #include "loader.h"
 #include "addins.h"
 #include "casiowin.h"
+#include "logo.h"
 
 static bool FindAddins_add(struct AddInList *list, u16 const *path,
                            struct CW_BFile_FileInfo *fileinfo)
@@ -285,7 +286,7 @@ int main(void)
             VRAM[i] = 0x0000;
 
         PrintMini(159, 5, "ADD-INS", 0xffff);
-        PrintMini(327, 5, "MPM", 0xffff);
+        Logo_Render(CW_GetVRAMAddress(), 328, 6, 384);
 
         sprintf(str, "%d.%d", MPM_VERSION_MAJOR, MPM_VERSION_MINOR);
         {int x = 362, y = 10;
