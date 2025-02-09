@@ -262,6 +262,37 @@ static void show_addin_details(struct AddIn *addin)
     CW_GetKey(&key);
 }
 
+static bool show_mapping(int rc)
+{
+    int offset = 0;
+    int key;
+
+    while(true) {
+        CW_Bdisp_AllClr_VRAM();
+        u32 *ptr1 = (void *)0x8c400000;
+        u32 *ptr2 = (void *)0xac400000;
+        u32 *ptr3 = (void *)0x00300000;
+        for(int i = 0; i < 10; i++) {
+            PrintfMiniMini(  8, 24+14*i, 0, "%06x:", (i+offset)*4);
+            PrintfMiniMini( 98, 24+14*i, 0, "%08x", ptr1[i+offset]);
+            PrintfMiniMini(198, 24+14*i, 0, "%08x", ptr2[i+offset]);
+            PrintfMiniMini(298, 24+14*i, 0, "%08x", ptr3[i+offset]);
+        }
+        PrintfMini(8, 176, "rc=%d", rc);
+        PrintfMini(8, 196, "EXE to load, BACK to abort");
+        CW_GetKey(&key);
+
+        if(key == KEY_CTRL_EXE)
+            return true;
+        if(key == KEY_CTRL_EXIT)
+            return false;
+        if(key == KEY_CTRL_UP && offset > 0)
+            offset -= 10;
+        if(key == KEY_CTRL_DOWN)
+            offset += 10;
+    }
+}
+
 int main(void)
 {
     u16 *VRAM = CW_GetVRAMAddress();
@@ -350,41 +381,22 @@ int main(void)
 
         if(key == KEY_CTRL_VARS)
             show_addin_details(AddInList_get(&addins, cursor));
-        if(key == KEY_CTRL_EXE) {
+        if(key == KEY_CTRL_EXE || key == KEY_CTRL_FORMAT) {
             struct AddIn *addin = AddInList_get(&addins, cursor);
             if(addin) {
                 MMU_SetEnabled(true);
                 int rc = load_addin(addin);
-                int offset = 0;
+                int run = true;
 
-                while(true) {
-                    CW_Bdisp_AllClr_VRAM();
-                    u32 *ptr1 = (void *)0x8c400000;
-                    u32 *ptr2 = (void *)0xac400000;
-                    u32 *ptr3 = (void *)0x00300000;
-                    for(int i = 0; i < 10; i++) {
-                        PrintfMiniMini(  8, 24+14*i, 0, "%06x:", (i+offset)*4);
-                        PrintfMiniMini( 98, 24+14*i, 0, "%08x", ptr1[i+offset]);
-                        PrintfMiniMini(198, 24+14*i, 0, "%08x", ptr2[i+offset]);
-                        PrintfMiniMini(298, 24+14*i, 0, "%08x", ptr3[i+offset]);
-                    }
-                    PrintfMini(8, 176, "rc=%d", rc);
-                    PrintfMini(8, 196, "EXE to load, BACK to abort");
-                    CW_GetKey(&key);
+                if(key == KEY_CTRL_FORMAT)
+                    run = show_mapping(rc);
 
+                if(run) {
                     // TODO: Move the stack pointer!!
-                    if(key == KEY_CTRL_EXE) {
-                        void (*code)(void) = (void *)0x00300000;
-                        code();
-                        break;
-                    }
-                    if(key == KEY_CTRL_EXIT)
-                        break;
-                    if(key == KEY_CTRL_UP && offset > 0)
-                        offset -= 10;
-                    if(key == KEY_CTRL_DOWN)
-                        offset += 10;
+                    void (*code)(void) = (void *)0x00300000;
+                    code();
                 }
+
                 MMU_SetEnabled(false);
                 CW_DrawFrame(0x0000);
             }
