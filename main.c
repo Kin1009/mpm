@@ -392,5 +392,9 @@ int main(void)
     }
 
     AddInList_clear(&addins);
+
+    for(int i = 5; i < 10; i++)
+        CW_Timer_Deinstall(i);
+
     return return_action;
 }

@@ -38,6 +38,16 @@ functions:
   BFile_NameToStr_ncpy:         [ 0x80241b66, 0x803358a6 ]
   BFile_StrToName_ncpy:         [ 0x80241bac, 0x803358ec ]
 
+  # Time
+  OS_InnerWait_ms:              [ 0x80216f4c, 0x8030a2dc ]
+  RTC_GetTicks:                 [ 0x8004babc, 0x8007cc0c ]
+  RTC_GetDateTime:              [ 0x801755b8, 0x80230f34 ]
+  RTC_SetDateTime:              [ 0x80175418, 0x80230d94 ]
+  Timer_Install:                [ 0x800b130c, 0x8010de28 ]
+  Timer_Start:                  [ 0x800b1456, 0x8010df72 ]
+  Timer_Stop:                   [ 0x800b14b2, 0x8010dfce ]
+  Timer_Deinstall:              [ 0x800b13d4, 0x8010def0 ]
+
   # Misc functions
   BatteryIcon:                  [ 0x8023e31c, 0x8033207c ]
   UpdateBatteryState:           [ 0x8017cac0, 0x80238f68 ]

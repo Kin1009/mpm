@@ -194,6 +194,17 @@ void CW_BFile_NameToStr_ncpy(char *dst, uint16_t const *src, int len);
 // v1:likely v2:likely
 void CW_BFile_StrToName_ncpy(uint16_t *dst, char const *src, int len);
 
+//=== Time ===================================================================//
+
+// v1:likely v2:likely
+int CW_Timer_Install(int id, void (*handler)(void), int delay);
+// v1:likely v2:likely
+int CW_Timer_Deinstall(int id);
+// v1:likely v2:likely
+int CW_Timer_Start(int id);
+// v1:likely v2:likely
+int CW_Timer_Stop(int id);
+
 //=== Internal functions =====================================================//
 
 // v1 v2
