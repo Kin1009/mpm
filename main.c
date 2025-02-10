@@ -187,11 +187,11 @@ void MMUTests(void)
 
 static int load_addin(struct AddIn *addin)
 {
-    if(addin->filesize > (1 << 20))
+    if(addin->filesize > (3 << 20))
         return -1001;
 
     void *romAddress = (void *)0x8c400000;
-    void *ramAddress = (void *)0x8c580000;
+    void *ramAddress = (void *)0x8c780000;
 
     int fd = CW_BFile_Open(addin->path, CW_BFile_ReadOnly);
     if(fd < 0)
@@ -205,7 +205,7 @@ static int load_addin(struct AddIn *addin)
         return rc;
 
     /* Map the entire range (why the heck not?!) */
-    for(int i = 0; i < 16; i++) {
+    for(int i = 0; i < 48; i++) {
         MMU_Map((void *)0x00300000 + (i << 16), romAddress + (i << 16),
                 0x10000, i);
     }
