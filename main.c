@@ -185,7 +185,7 @@ void MMUTests(void)
     }
 }
 
-static int load_addin(struct AddIn *addin)
+static int load_addin(struct AddIn *addin, u32 *loadAddress)
 {
     if(addin->filesize > (3 << 20))
         return -1001;
@@ -199,6 +199,8 @@ static int load_addin(struct AddIn *addin)
 
     /* Skip the header, load only the code */
     int read_size = addin->filesize - 0x7000;
+    if(loadAddress)
+        *loadAddress = (u32)romAddress;
     int rc = CW_BFile_Read(fd, romAddress, read_size, 0x7000);
     CW_BFile_Close(fd);
     if(rc < 0 || rc != read_size)
@@ -293,6 +295,23 @@ static bool show_mapping(int rc)
     }
 }
 
+static void run_addin(u32 loadAddress)
+{
+    u32 loadinfo[] = {
+        0x00000001, 0x00000001,  // Info format version
+        0x00000010, 0x8c200000,  // Start of an available RAM area
+        0x00000011, loadAddress, // End of an available RAM area
+        0x00000000,
+    };
+
+    // TODO: Move the stack pointer!!
+    int (*code)(int sig, u32 *loadinfo) = (void *)0x00300000;
+    int rc = code(0x4d504d30 /* 'MPM0' */, loadinfo);
+
+    /* Ignore return code for now. */
+    (void)rc;
+}
+
 int main(void)
 {
     u16 *VRAM = CW_GetVRAMAddress();
@@ -384,18 +403,15 @@ int main(void)
         if(key == KEY_CTRL_EXE || key == KEY_CTRL_FORMAT) {
             struct AddIn *addin = AddInList_get(&addins, cursor);
             if(addin) {
+                u32 loadAddress;
                 MMU_SetEnabled(true);
-                int rc = load_addin(addin);
+                int rc = load_addin(addin, &loadAddress);
                 int run = true;
 
                 if(key == KEY_CTRL_FORMAT)
                     run = show_mapping(rc);
-
-                if(run) {
-                    // TODO: Move the stack pointer!!
-                    void (*code)(void) = (void *)0x00300000;
-                    code();
-                }
+                if(run)
+                    run_addin(loadAddress);
 
                 MMU_SetEnabled(false);
                 CW_DrawFrame(0x0000);
