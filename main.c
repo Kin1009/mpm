@@ -397,7 +397,11 @@ int main(void)
             next_cursor++;
         if(next_cursor >= 0 && next_cursor < AddInList_size(&addins))
             cursor = next_cursor;
+        else if (next_cursor<0)
+            cursor = AddInList_size(&addins)-1;
+        else cursor = 0;
 
+        
         if(key == KEY_CTRL_VARS)
             show_addin_details(AddInList_get(&addins, cursor));
         if(key == KEY_CTRL_EXE || key == KEY_CTRL_FORMAT) {
