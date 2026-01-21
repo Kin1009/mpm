@@ -322,17 +322,25 @@ int main(void)
     int return_action = RETURN_MAIN_MENU;
 
     struct AddInList addins;
-    AddInList_init(&addins, 256);
+    addins.capacity = 0;
+    addins.size = 0;
 
-    int rc = FindAddins(&addins);
-
-    for(int i = 0; i < AddInList_size(&addins); i++)
-        AddIn_load_metadata(AddInList_get(&addins, i));
-
+    int rc = 0;
+    bool update = true;
     int cursor = 0;
 
     while(1) {
         CW_Bdisp_AllClr_VRAM();
+        
+        if (update)
+        {
+            AddInList_clear(&addins);
+            AddInList_init(&addins, 256);
+            rc = FindAddins(&addins);
+            for(int i = 0; i < AddInList_size(&addins); i++)
+                AddIn_load_metadata(AddInList_get(&addins, i));
+            update = false;
+        }
 
         for(int i = 0; i < 384 * 23; i++)
             VRAM[i] = 0x0000;
@@ -381,9 +389,10 @@ int main(void)
 
         if(key == KEY_CTRL_EXIT || key == KEY_CTRL_MENU || key == KEY_CTRL_TOOLS)
             break;
-        if(key == KEY_CTRL_CATALOG) {
-            return_action = RETURN_USB_POPUP;
-            break;
+        if(key == KEY_CTRL_CATALOG)
+        {
+            CW_INTERNAL_USBPopup();
+            update = true;
         }
         if(key == KEY_CHAR_PLUS)
             MMUTests();
@@ -422,6 +431,7 @@ int main(void)
                 MMU_SetEnabled(false);
                 CW_DrawFrame(0x0000);
             }
+            update = true;
         }
     }
 
