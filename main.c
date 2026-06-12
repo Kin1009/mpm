@@ -430,8 +430,8 @@ int main(void)
 
                 MMU_SetEnabled(false);
                 CW_DrawFrame(0x0000);
+                update = run;
             }
-            update = true;
         }
     }
 
