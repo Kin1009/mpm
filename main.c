@@ -187,26 +187,42 @@ void MMUTests(void)
     }
 }
 
-static int load_addin(struct AddIn *addin, u32 *loadAddress)
+static int read_from_usb(unsigned char *out, int sz)
 {
-    if(addin->filesize > (3 << 20))
-        return -1001;
+    while (CW_USB_PollRX() == 0) {
+        extern void CW_OS_InnerWait_ms(int ms);
+        CW_OS_InnerWait_ms(25);
+    }
+    short count = 0;
+    int rc = CW_USB_Read(out, sz, &count);
+    (void)rc;
+    return count;
+}
 
+static int load_addin(struct AddIn *addin, u32 *loadAddress, bool fastload)
+{
     void *romAddress = (void *)0x8c400000;
     void *ramAddress = (void *)0x8c780000;
 
-    int fd = CW_BFile_Open(addin->path, CW_BFile_ReadOnly);
-    if(fd < 0)
-        return fd;
-
-    /* Skip the header, load only the code */
-    int read_size = addin->filesize - 0x7000;
     if(loadAddress)
         *loadAddress = (u32)romAddress;
-    int rc = CW_BFile_Read(fd, romAddress, read_size, 0x7000);
-    CW_BFile_Close(fd);
-    if(rc < 0 || rc != read_size)
-        return rc;
+    
+    int rc = 0;
+    if(!fastload) {
+        if(addin->filesize > (3 << 20))
+            return -1001;
+
+        int fd = CW_BFile_Open(addin->path, CW_BFile_ReadOnly);
+        if(fd < 0)
+            return fd;
+
+        /* Skip the header, load only the code */
+        int read_size = addin->filesize - 0x7000;
+        rc = CW_BFile_Read(fd, romAddress, read_size, 0x7000);
+        CW_BFile_Close(fd);
+        if(rc < 0 || rc != read_size)
+            return rc;
+    }
 
     /* Map the entire range (why the heck not?!) */
     for(int i = 0; i < 48; i++) {
@@ -326,20 +342,21 @@ int main(void)
     addins.size = 0;
 
     int rc = 0;
-    bool update = true;
+    int update = true;
+    int fastload = false;
     int cursor = 0;
 
     while(1) {
         CW_Bdisp_AllClr_VRAM();
         
-        if (update)
-        {
+        if(update) {
             AddInList_clear(&addins);
             AddInList_init(&addins, 256);
             rc = FindAddins(&addins);
             for(int i = 0; i < AddInList_size(&addins); i++)
                 AddIn_load_metadata(AddInList_get(&addins, i));
             update = false;
+            fastload = false;
         }
 
         for(int i = 0; i < 384 * 23; i++)
@@ -389,8 +406,7 @@ int main(void)
 
         if(key == KEY_CTRL_EXIT || key == KEY_CTRL_MENU || key == KEY_CTRL_TOOLS)
             break;
-        if(key == KEY_CTRL_CATALOG)
-        {
+        if(key == KEY_CTRL_CATALOG) {
             CW_INTERNAL_USBPopup();
             update = true;
         }
@@ -415,12 +431,37 @@ int main(void)
         
         if(key == KEY_CTRL_VARS)
             show_addin_details(AddInList_get(&addins, cursor));
+
+        if(key == KEY_CTRL_SETTINGS) {
+            CW_MsgBoxPush(1);
+            PrintMini(40, 96, "Initiating Add-in Push...", 0x0000);
+            CW_Bdisp_PutDisp_DD();
+
+            while(CW_USB_Open(0x20) == 5);
+            CW_USB_ClearRX();
+            CW_USB_Write((unsigned char *)"USB loader ready", 0x11);
+
+            size_t rc = 0;
+            read_from_usb((unsigned char *)&rc, 4);
+            if(rc > 0x200000) {
+                CW_USB_ForceClose(1);
+                CW_MsgBoxPush(1);
+                PrintMini(40, 96, "Input is too large! (max. 2 MB)", 0x0000);
+                CW_GetKey(&(int){0});
+            } else {
+                for(size_t offset = 0; offset < rc; offset += 0x100)
+                    read_from_usb((unsigned char *)(0x8c400000 + offset), 0x100);
+                CW_USB_ForceClose(1);
+                key = KEY_CTRL_EXE;
+                fastload = true;
+            }
+        }
         if(key == KEY_CTRL_EXE || key == KEY_CTRL_FORMAT) {
             struct AddIn *addin = AddInList_get(&addins, cursor);
-            if(addin) {
+            if(fastload || addin) {
                 u32 loadAddress;
                 MMU_SetEnabled(true);
-                int rc = load_addin(addin, &loadAddress);
+                int rc = load_addin(addin, &loadAddress, fastload);
                 int run = true;
 
                 if(key == KEY_CTRL_FORMAT)

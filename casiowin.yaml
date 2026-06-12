@@ -48,9 +48,19 @@ functions:
   Timer_Stop:                   [ 0x800b14b2, 0x8010dfce ]
   Timer_Deinstall:              [ 0x800b13d4, 0x8010def0 ]
 
+  # USB
+  USB_PollRX:                   [ 0         , 0x8034da3e ]
+  USB_ClearRX:                  [ 0         , 0x8034da66 ]
+  USB_Open:                     [ 0         , 0x8023edac ]
+  USB_ForceClose:               [ 0         , 0x8034ddd2 ]
+  USB_Read:                     [ 0         , 0x8034da12 ]
+  USB_Write:                    [ 0         , 0x8034d9d2 ]
+
   # Misc functions
   BatteryIcon:                  [ 0x8023e31c, 0x8033207c ]
   UpdateBatteryState:           [ 0x8017cac0, 0x80238f68 ]
+  OS_InnerWait_ms:              [ 0         , 0x8030a2dc ]
+  MsgBoxPush:                   [ 0         , 0x8029a33c ]
 
   # Internal functions
   INTERNAL_USBPopup:            [ 0x800aba08, 0x800e7988 ]
