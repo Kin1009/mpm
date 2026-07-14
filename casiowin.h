@@ -1,6 +1,7 @@
 #ifndef _CASIOWIN_H
 #define _CASIOWIN_H
 
+#include "util.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -56,6 +57,16 @@ int CW_GetKey(int *key);
 // v1:used v2:likely
 int CW_GetKeyWait(int *column, int *row, int wait_type, int timeout, int menu,
                   uint16_t *keycode);
+
+typedef volatile struct {
+    uint8_t row1, row0;
+    uint8_t row3, row2;
+    uint8_t row5, row4;
+    uint8_t row7, row6;
+    uint8_t row9, row8;
+} PACKED(2) SH7305_iokbd_t;
+
+#define SH7305_IOKBD (*((SH7305_iokbd_t *)0xa44b0000))
 
 #define KEY_CTRL_PREVTAB    30075
 #define KEY_CTRL_UP         30018

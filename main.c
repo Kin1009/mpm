@@ -192,6 +192,10 @@ static int read_from_usb(unsigned char *out, int sz)
     while (CW_USB_PollRX() == 0) {
         extern void CW_OS_InnerWait_ms(int ms);
         CW_OS_InnerWait_ms(25);
+        if (SH7305_IOKBD.row0 == 1) {
+            CW_USB_ForceClose(1);
+            return -1;
+        }
     }
     short count = 0;
     int rc = CW_USB_Read(out, sz, &count);
@@ -199,7 +203,7 @@ static int read_from_usb(unsigned char *out, int sz)
     return count;
 }
 
-static int load_addin(struct AddIn *addin, u32 *loadAddress, bool fastload)
+static int load_addin(struct AddIn *addin, u32 *loadAddress, u32 fastload)
 {
     void *romAddress = (void *)0x8c400000;
     void *ramAddress = (void *)0x8c780000;
@@ -208,7 +212,15 @@ static int load_addin(struct AddIn *addin, u32 *loadAddress, bool fastload)
         *loadAddress = (u32)romAddress;
     
     int rc = 0;
-    if(!fastload) {
+    if(fastload) {
+        if(fastload > (3 << 20))
+            return -1001;
+
+        for(size_t offset = 0; offset < fastload; offset += 0x100)
+            if (read_from_usb((unsigned char *)((u32)romAddress + offset), 0x100) == -1)
+                return -1;
+        CW_USB_ForceClose(1);
+    } else {
         if(addin->filesize > (3 << 20))
             return -1001;
 
@@ -343,7 +355,6 @@ int main(void)
 
     int rc = 0;
     int update = true;
-    int fastload = false;
     int cursor = 0;
 
     while(1) {
@@ -356,7 +367,6 @@ int main(void)
             for(int i = 0; i < AddInList_size(&addins); i++)
                 AddIn_load_metadata(AddInList_get(&addins, i));
             update = false;
-            fastload = false;
         }
 
         for(int i = 0; i < 384 * 23; i++)
@@ -432,6 +442,7 @@ int main(void)
         if(key == KEY_CTRL_VARS)
             show_addin_details(AddInList_get(&addins, cursor));
 
+        u32 fastload = 0;
         if(key == KEY_CTRL_SETTINGS) {
             CW_MsgBoxPush(1);
             PrintMini(40, 96, "Initiating Add-in Push...", 0x0000);
@@ -440,21 +451,8 @@ int main(void)
             while(CW_USB_Open(0x20) == 5);
             CW_USB_ClearRX();
             CW_USB_Write((unsigned char *)"USB loader ready", 0x11);
-
-            size_t rc = 0;
-            read_from_usb((unsigned char *)&rc, 4);
-            if(rc > 0x200000) {
-                CW_USB_ForceClose(1);
-                CW_MsgBoxPush(1);
-                PrintMini(40, 96, "Input is too large! (max. 2 MB)", 0x0000);
-                CW_GetKey(&(int){0});
-            } else {
-                for(size_t offset = 0; offset < rc; offset += 0x100)
-                    read_from_usb((unsigned char *)(0x8c400000 + offset), 0x100);
-                CW_USB_ForceClose(1);
+            if (read_from_usb((unsigned char *)&fastload, 4) != -1)
                 key = KEY_CTRL_EXE;
-                fastload = true;
-            }
         }
         if(key == KEY_CTRL_EXE || key == KEY_CTRL_FORMAT) {
             struct AddIn *addin = AddInList_get(&addins, cursor);
