@@ -48,7 +48,7 @@ void CW_MMPrint(int x, int y, char const *str, int mode, int xmax,
 // v1:used v2:used
 void CW_DrawFrame(int color);
 // v1 v2:used
-void CW_MsgBoxPush(int lines /* 0 to 6 */);
+void CW_MsgBoxPush(int lines /* 1 to 6 */);
 
 //=== Keyboard ===============================================================//
 
@@ -167,6 +167,8 @@ int CW_BFile_Read(int handle, void *data, int size, int whence);
 int CW_BFile_Seek(int fd, int offset);
 // v1:likely v2:likely
 int CW_BFile_GetPos(int fd);
+// v1 v2:used
+int CW_BFile_Block(int fd, int whence, void **block_ptr);
 
 struct CW_BFile_FileInfo {
     uint16_t index;
@@ -209,6 +211,8 @@ void CW_BFile_StrToName_ncpy(uint16_t *dst, char const *src, int len);
 
 //=== Time ===================================================================//
 
+// v1:likely v2:likely
+void CW_OS_InnerWait_ms(int ms);
 // v1:likely v2:likely
 int CW_Timer_Install(int id, void (*handler)(void), int delay);
 // v1:likely v2:likely

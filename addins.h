@@ -1,5 +1,6 @@
 #include "util.h"
 
+#define ADDIN_ICON_BLOCKS 3
 struct AddIn {
     /* Full path to add-in, heap allocated. */
     u16 *path;
@@ -13,9 +14,14 @@ struct AddIn {
     char internal[11];
     char version[10];
     char date[14];
-    /* Icons (heavy!) */
-    u16 icon_uns[0x1800];
-    u16 icon_sel[0x1800];
+    /* Direct file block addresses for icons. */
+    union {
+        u16 *blocks[ADDIN_ICON_BLOCKS * 2];
+        struct {
+            u16 *uns[ADDIN_ICON_BLOCKS];
+            u16 *sel[ADDIN_ICON_BLOCKS];
+        };
+    } icon;
 };
 
 /* Get the metadata by reading the g3a file. Sets addin->metadata_loaded as

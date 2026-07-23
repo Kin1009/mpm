@@ -1,10 +1,6 @@
 #pragma once
 #include "util.h"
 
-/* Return codes from main. */
-#define RETURN_MAIN_MENU 0
-#define RETURN_USB_POPUP 1
-
 #define PTEH  ((u32 volatile *)0xff000000)
 #define PTEL  ((u32 volatile *)0xff000004)
 #define MMUCR ((u32 volatile *)0xff000010)

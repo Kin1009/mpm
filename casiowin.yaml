@@ -16,6 +16,7 @@ functions:
   MMPrint:                      [ 0x80118a88, 0x8018c328 ]
   MMPrintRef:                   [ 0x80118980, 0x8018c220 ]
   DrawFrame:                    [ 0x80049ed4, 0x8007b024 ]
+  MsgBoxPush:                   [ 0         , 0x8029a33c ]
 
   # Keyboard input
   GetKeyWait:                   [ 0x8017be56, 0x802382fe ]
@@ -32,6 +33,7 @@ functions:
   BFile_GetPos:                 [ 0x8024003c, 0x80333d7c ]
   BFile_Write:                  [ 0x8024025e, 0x80333f9e ]
   BFile_Read:                   [ 0x80240082, 0x80333dc2 ]
+  BFile_Block:                  [ 0         , 0x80333cf2 ]
   BFile_FindFirst:              [ 0x80240888, 0x803345c8 ]
   BFile_FindNext:               [ 0x80240b06, 0x80334846 ]
   BFile_FindClose:              [ 0x80240c10, 0x80334950 ]
@@ -59,8 +61,6 @@ functions:
   # Misc functions
   BatteryIcon:                  [ 0x8023e31c, 0x8033207c ]
   UpdateBatteryState:           [ 0x8017cac0, 0x80238f68 ]
-  OS_InnerWait_ms:              [ 0         , 0x8030a2dc ]
-  MsgBoxPush:                   [ 0         , 0x8029a33c ]
 
   # Internal functions
   INTERNAL_USBPopup:            [ 0x800aba08, 0x800e7988 ]

@@ -37,6 +37,7 @@ void start(void)
     CASIOWIN_SetAPI(API_version);
 
     int action = main();
+    (void)action;
 
     /* Make sure the MMU is disabled before we leave. The OS will crash in many
        spots if we keep it on. */
@@ -46,7 +47,4 @@ void start(void)
     void (**dtor)(void) = &ld_bdtors;
     while(dtor < &ld_edtors)
         (*dtor++)();
-
-    if(action == RETURN_USB_POPUP)
-        CW_INTERNAL_USBPopup();
 }

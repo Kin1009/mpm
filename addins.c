@@ -2,28 +2,8 @@
 #include "casiowin.h"
 #include <string.h>
 
-/* Preloaded add-in array because these things are huge (28 kB each!) and we
-   can only allocate up to 4 in OS heap, even less if some heap-intesive apps
-   are running. */
-#define ADDIN_SLAB_SIZE 8
+#define ADDIN_SLAB_SIZE 256
 static struct AddIn slab_addins[ADDIN_SLAB_SIZE];
-static int slab_used = 0;
-
-struct AddIn *AddIn_alloc(void)
-{
-    if(slab_used < ADDIN_SLAB_SIZE)
-        return &slab_addins[slab_used++];
-    else
-        return CW_malloc(sizeof(struct AddIn));
-}
-
-void AddIn_free(struct AddIn *addin)
-{
-    if(addin >= &slab_addins[0] && addin < &slab_addins[ADDIN_SLAB_SIZE])
-        {}
-    else
-        CW_free(addin);
-}
 
 //============================================================================//
 
@@ -38,8 +18,8 @@ void AddIn_load_metadata(struct AddIn *addin)
         return;
     }
 
-    char buffer[0x14a];
-    int rc = CW_BFile_Read(fd, buffer, 0x14a, 0);
+    char *buffer;
+    int rc = CW_BFile_Block(fd, 0, (void **)&buffer);
     if(rc < 0) {
         addin->metadata_error = rc;
         CW_BFile_Close(fd);
@@ -51,12 +31,14 @@ void AddIn_load_metadata(struct AddIn *addin)
     memcpy(addin->version, buffer + 0x130, 10);
     memcpy(addin->date, buffer + 0x13c, 14);
 
-    int icon_sizes = sizeof addin->icon_uns + sizeof addin->icon_sel;
-    rc = CW_BFile_Read(fd, addin->icon_uns, icon_sizes, 0x1000);
-    if(rc < 0) {
-        addin->metadata_error = rc;
-        CW_BFile_Close(fd);
-        return;
+    for(int i = 0; i < ADDIN_ICON_BLOCKS * 2; i++) {
+        int rc = CW_BFile_Block(fd, 0x1000 + i * 0x1000,
+            (void **)&addin->icon.blocks[i]);
+        if(rc < 0) {
+            addin->metadata_error = rc;
+            CW_BFile_Close(fd);
+            return;
+        }
     }
 
     CW_BFile_Close(fd);
@@ -70,13 +52,19 @@ void AddIn_render_icon(struct AddIn const *addin, int x, int y, bool selected)
         return;
 
     u16 *VRAM = (u16 *)CW_GetVRAMAddress() + 384 * y + x;
-    u16 const *icon = selected ? addin->icon_sel : addin->icon_uns;
+    u16 *const *blocks = selected ? addin->icon.sel : addin->icon.uns;
 
     for(int row = 0; row < h; row++) {
-        for(int col = 0; col < w; col++)
-            VRAM[col] = icon[col];
+        int i = row * w / 0x800;
+        int offset = row * w % 0x800;
+        int chunk = 0x800 - offset;
+        if (chunk < w) {
+            memcpy(VRAM, blocks[i] + offset, chunk * sizeof(u16));
+            memcpy(VRAM + chunk, blocks[i + 1], (w - chunk) * sizeof(u16));
+        } else {
+            memcpy(VRAM, blocks[i] + offset, w * sizeof(u16));
+        }
         VRAM += 384;
-        icon += w;
     }
 
     /* Make sure we have a terminator */
@@ -101,7 +89,10 @@ void AddInList_init(struct AddInList *list, uint capacity)
     if(list->addins) {
         memset(list->addins, 0, bytes);
         list->capacity = capacity;
+    } else {
+        list->capacity = 0;
     }
+    list->size = 0;
 }
 
 void AddInList_clear(struct AddInList *list)
@@ -109,9 +100,7 @@ void AddInList_clear(struct AddInList *list)
     for(uint i = 0; i < list->size; i++) {
         struct AddIn *addin = list->addins[i];
         CW_free(addin->path);
-        AddIn_free(addin);
     }
-    memset(list->addins, 0, list->capacity * sizeof *list->addins);
     list->size = 0;
 }
 
@@ -130,10 +119,7 @@ struct AddIn *AddInList_extend(struct AddInList *list)
     if(list->size >= list->capacity)
         return NULL;
 
-    struct AddIn *addin = AddIn_alloc();
-    if(!addin)
-        return NULL;
-
+    struct AddIn *addin = &slab_addins[list->size];
     memset(addin, 0, sizeof *addin);
     list->addins[list->size] = addin;
     list->size++;

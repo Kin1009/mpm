@@ -190,7 +190,6 @@ void MMUTests(void)
 static int read_from_usb(unsigned char *out, int sz)
 {
     while (CW_USB_PollRX() == 0) {
-        extern void CW_OS_InnerWait_ms(int ms);
         CW_OS_InnerWait_ms(25);
         if (SH7305_IOKBD.row0 == 1) {
             CW_USB_ForceClose(1);
@@ -347,11 +346,8 @@ int main(void)
     u16 *VRAM = CW_GetVRAMAddress();
     char str[64];
 
-    int return_action = RETURN_MAIN_MENU;
-
     struct AddInList addins;
-    addins.capacity = 0;
-    addins.size = 0;
+    AddInList_init(&addins, 256);
 
     int rc = 0;
     int update = true;
@@ -362,7 +358,6 @@ int main(void)
         
         if(update) {
             AddInList_clear(&addins);
-            AddInList_init(&addins, 256);
             rc = FindAddins(&addins);
             for(int i = 0; i < AddInList_size(&addins); i++)
                 AddIn_load_metadata(AddInList_get(&addins, i));
@@ -386,7 +381,7 @@ int main(void)
             PrintMini(8, 30, "No add-ins!", 0x0000);
         }
         else for(int i = 0; i < AddInList_size(&addins); i++) {
-            struct AddIn const *addin = AddInList_get(&addins, i);
+            struct AddIn *addin = AddInList_get(&addins, i);
             int icon_y = 24 + 64 * (i / 4);
             int icon_x = 92 * (i % 4);
             bool selected = (cursor == i);
@@ -475,9 +470,10 @@ int main(void)
     }
 
     AddInList_clear(&addins);
+    CW_free(addins.addins);
 
     for(int i = 5; i < 10; i++)
         CW_Timer_Deinstall(i);
 
-    return return_action;
+    return 0;
 }
