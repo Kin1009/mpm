@@ -210,33 +210,29 @@ static int load_addin(struct AddIn *addin, u32 *loadAddress, u32 fastload)
     if(loadAddress)
         *loadAddress = (u32)romAddress;
     
-    int rc = 0;
-    if(fastload) {
-        if(fastload > (3 << 20))
-            return -1001;
+    /* Skip the header, load only the code */
+    int binary_size = fastload ? fastload : addin->filesize - 0x7000;
+    if(binary_size > 0x370000)
+        return -1001;
 
+    if(fastload) {
         for(size_t offset = 0; offset < fastload; offset += 0x100)
             if (read_from_usb((unsigned char *)((u32)romAddress + offset), 0x100) == -1)
                 return -1;
         CW_USB_ForceClose(1);
     } else {
-        if(addin->filesize > (3 << 20))
-            return -1001;
-
         int fd = CW_BFile_Open(addin->path, CW_BFile_ReadOnly);
         if(fd < 0)
             return fd;
 
-        /* Skip the header, load only the code */
-        int read_size = addin->filesize - 0x7000;
-        rc = CW_BFile_Read(fd, romAddress, read_size, 0x7000);
+        int rc = CW_BFile_Read(fd, romAddress, binary_size, 0x7000);
         CW_BFile_Close(fd);
-        if(rc < 0 || rc != read_size)
+        if(rc < 0 || rc != binary_size)
             return rc;
     }
 
     /* Map the entire range (why the heck not?!) */
-    for(int i = 0; i < 48; i++) {
+    for(int i = 0; i < 55; i++) {
         MMU_Map((void *)0x00300000 + (i << 16), romAddress + (i << 16),
                 0x10000, i);
     }
@@ -261,7 +257,7 @@ static int load_addin(struct AddIn *addin, u32 *loadAddress, u32 fastload)
           + (1 << 3); // Operand Cache Invalidate
     __asm__("icbi @%0":: "r"(0xa0000000));
 
-    return rc;
+    return binary_size;
 }
 
 #define MPM_VERSION_MAJOR 1
@@ -381,7 +377,7 @@ int main(void)
             PrintMini(8, 30, "No add-ins!", 0x0000);
         }
         else for(int i = 0; i < AddInList_size(&addins); i++) {
-            struct AddIn *addin = AddInList_get(&addins, i);
+            struct AddIn const *addin = AddInList_get(&addins, i);
             int icon_y = 24 + 64 * (i / 4);
             int icon_x = 92 * (i % 4);
             bool selected = (cursor == i);

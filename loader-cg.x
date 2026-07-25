@@ -1,13 +1,16 @@
 OUTPUT_ARCH(sh3)
 OUTPUT_FORMAT(binary)
-ENTRY(_start)
+ENTRY(relocate)
 
 MEMORY {
-    ram (rwx): o = 0x8c700000, l = 1M
+    /* MPM loads us at 8c700000, but we don't need a full 1 MiB of RAM.
+       Relocate to 8c770000 so we can give a bit more to add-ins. */
+    ram (rwx): o = 0x8c770000, l = 64k
 }
 
 SECTIONS {
     .text : {
+        *(.text.reloc)
         *(.text.entry)
 
         _ld_bctors = . ;
@@ -35,4 +38,7 @@ SECTIONS {
         . = ALIGN(16);
         _ld_ebss = . ;
     } > ram
+
+    _reloc = ORIGIN(ram);
+    _lword = ABSOLUTE(ALIGN(4) - ORIGIN(ram)) / 4;
 }

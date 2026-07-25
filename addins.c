@@ -89,7 +89,8 @@ void AddInList_init(struct AddInList *list, uint capacity)
     if(list->addins) {
         memset(list->addins, 0, bytes);
         list->capacity = capacity;
-    } else {
+    }
+    else {
         list->capacity = 0;
     }
     list->size = 0;

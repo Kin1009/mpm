@@ -6,6 +6,7 @@ set(SOURCES
   addins.c
   casiowin.S
   fxlibc_hal.c
+  reloc.S
   loader.c
   logo.c
   main.c
