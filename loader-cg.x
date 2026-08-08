@@ -4,8 +4,8 @@ ENTRY(relocate)
 
 MEMORY {
     /* MPM loads us at 8c700000, but we don't need a full 1 MiB of RAM.
-       Relocate to 8c770000 so we can give a bit more to add-ins. */
-    ram (rwx): o = 0x8c770000, l = 64k
+       Relocate to 8c7f0000 so we can give a bit more to add-ins. */
+    ram (rwx): o = 0x8c7f0000, l = 64k
 }
 
 SECTIONS {

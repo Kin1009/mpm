@@ -205,7 +205,7 @@ static int read_from_usb(unsigned char *out, int sz)
 static int load_addin(struct AddIn *addin, u32 *loadAddress, u32 fastload)
 {
     void *romAddress = (void *)0x8c400000;
-    void *ramAddress = (void *)0x8c780000;
+    void *ramAddress = (void *)0x8c160000;
 
     if(loadAddress)
         *loadAddress = (u32)romAddress;
