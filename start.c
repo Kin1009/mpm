@@ -28,11 +28,20 @@ void start(void)
     /* Figure out the Math+/CG-100 API version based on OS version. */
     char const *version = (void *)0xa0020020;
     int API_version = 0;
+    u16 *CW_CurrentAppIndex = NULL;
 
-    if(!memcmp(version, "01.00", 5))
+    if(!memcmp(version, "01.00", 5)) {
         API_version = 0;
-    else if(!memcmp(version, "02.00", 5))
+    }
+    else if(!memcmp(version, "02.00", 5)) {
         API_version = 1;
+        CW_CurrentAppIndex = (void *)0x8c0afe28;
+    }
+
+    /* Invalidate the current OS app index to force initialization when
+       switching app in main menu. */
+    if(CW_CurrentAppIndex)
+        *CW_CurrentAppIndex = 0xffff;
 
     CASIOWIN_SetAPI(API_version);
 
