@@ -204,16 +204,16 @@ static int read_from_usb(unsigned char *out, int sz)
 
 static int load_addin(struct AddIn *addin, u32 *loadAddress, u32 fastload)
 {
-    void *romAddress = (void *)0x8c400000;
-    void *ramAddress = (void *)0x8c160000;
-
-    if(loadAddress)
-        *loadAddress = (u32)romAddress;
-    
     /* Skip the header, load only the code */
     int binary_size = fastload ? fastload : addin->filesize - 0x7000;
     if(binary_size > 0x370000)
         return -1001;
+
+    void *romAddress = (void *)((0x8c7f0000 - binary_size) & -0x10000);
+    void *ramAddress = (void *)0x8c160000;
+
+    if(loadAddress)
+        *loadAddress = (u32)romAddress;
 
     if(fastload) {
         for(size_t offset = 0; offset < fastload; offset += 0x100)
@@ -449,6 +449,7 @@ int main(void)
             struct AddIn *addin = AddInList_get(&addins, cursor);
             if(fastload || addin) {
                 u32 loadAddress;
+                invalidateTLB();
                 MMU_SetEnabled(true);
                 int rc = load_addin(addin, &loadAddress, fastload);
                 int run = true;
