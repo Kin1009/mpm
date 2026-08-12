@@ -37,6 +37,10 @@ void start(void)
         API_version = 1;
         CW_CurrentAppIndex = (void *)0x8c0afe28;
     }
+    else if(!memcmp(version, "02.10", 5)) {
+        API_version = 2;
+        CW_CurrentAppIndex = (void *)0x8c0b1308;
+    }
 
     /* Invalidate the current OS app index to force initialization when
        switching app in main menu. */
