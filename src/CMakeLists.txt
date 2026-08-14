@@ -41,7 +41,7 @@ target_link_options(loader PRIVATE -T "${CMAKE_CURRENT_SOURCE_DIR}/loader-cg.x")
 # We link with what's likely a gint-oriented build of fxlibc, with no default
 # HAL definitions. We provide a few in fxlibc_hal.c.
 target_link_libraries(loader -lc)
-
 add_custom_command(TARGET loader POST_BUILD
-  COMMAND echo -ne '\\x1b[36;1mmpm.bin size: \\x1b[0m'
-  COMMAND stat -c %s "${CMAKE_CURRENT_BINARY_DIR}/mpm.bin")
+    COMMAND ${CMAKE_COMMAND} -E echo "mpm.bin size:"
+    COMMAND stat -f "%z" "${CMAKE_CURRENT_BINARY_DIR}/mpm.bin"
+)

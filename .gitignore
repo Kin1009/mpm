@@ -1,1 +1,4 @@
-/build-cg
+/build-cg/CMakeFiles
+/casio-toolchain-finish
+/mpm-toolchain-ref
+/patches

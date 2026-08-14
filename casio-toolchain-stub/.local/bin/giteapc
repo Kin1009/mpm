@@ -1,0 +1,171 @@
+#! /usr/bin/env python3
+
+"""
+GiteaPC is an automated installer/updated for repositories of the Planète Casio
+Git forge (https://git.planet-casio.com/). It is mainly used to set up installs
+of the add-in development fxSDK.
+"""
+
+# Install prefix (inserted at compile-time)
+PREFIX = "/Volumes/NAS/Code/mpm/casio-toolchain/home/.local"
+# Program version (inserted at compile-time)
+VERSION = "1.1"
+
+import sys
+sys.path.append(PREFIX + "/lib/giteapc")
+
+import giteapc.repo
+from giteapc.util import *
+from giteapc.config import REPO_FOLDER, PREFIX_FOLDER
+import getopt
+import sys
+import os
+
+# TODO:
+# * build, install: test repository update logic
+# * install: test dependency logic
+
+usage_string = """
+usage: {R}giteapc{_} [{R}list{_}|{R}fetch{_}|{R}show{_}|{R}build{_}|{R}install{_}|{R}uninstall{_}] [{g}{i}ARGS...{_}]
+
+GiteaPC is a tool to automatically clone, install and update repositories from
+the Planète Casio Git forge. In the following commands, each {g}{i}REPOSITORY{_}
+is either a full name like "Lephenixnoir/sh-elf-gcc", or a short name like
+"sh-elf-gcc" when there is no ambiguity.
+
+{R}giteapc list{_} [{R}-r{_}] [{g}{i}PATTERN{_}]
+  List all repositories on this computer. With -r, list repositories on the
+  forge. A wildcard pattern can be specified to filter the results.
+{R}giteapc install{_} [{R}--https{_}|{R}--ssh{_}] [{R}-u{_}] [{R}-y{_}] [{R}-n{_}] [{R}--patches{_} {g}{i}DIR{_}] {g}{i}REPOSITORY{_}[{R}@{_}{g}{i}VERSION{_}][{R}:{_}{g}{i}CONFIG{_}]{g}{i}...{_}
+  Fetch repositories and their dependencies, then build and install them.
+  With -u, pulls local repositories (update mode). With -y, do not ask for
+  interactive confirmation. With -n, don't build or install (dry run). With
+  --patches DIR, apply local patches from DIR after every fetch and build
+  step (see "Patches" below).
+{R}giteapc uninstall{_} [{R}-k{_}] {g}{i}REPOSITORY...{_}
+  Uninstall the build products of the specified repositories and remove the
+  source files. With -k, keep the source files.
+
+Advanced commands:
+
+{R}giteapc fetch{_} [{R}--https{_}|{R}--ssh{_}] [{R}-u{_}] [{R}-f{_}] [{R}--patches{_} {g}{i}DIR{_}] [{g}{i}REPOSITORY{_}[{R}@{_}{g}{i}VERSION{_}]{g}{i}...{_}]
+  Clone, fetch, or pull a repository. If no repository is specified, fetches
+  all local repositories. HTTPS or SSH can be selected when cloning (HTTPS by
+  default). With -u, pulls after fetching. With --patches DIR, apply local
+  patches from DIR once the fetch, checkout, and pull are complete.
+{R}giteapc show{_} [{R}-r{_}] [{R}-p{_}] {g}{i}REPOSITORY...{_}
+  Show the branches and tags (versions) for the specified local repositories.
+  With -r, show information for remote repositories on the forge.
+  With -p, just print the path of local repositories (useful in scripts).
+{R}giteapc build{_} [{R}-i{_}] [{R}--skip-configure{_}] [{R}--patches{_} {g}{i}DIR{_}] {g}{i}REPOSITORY{_}[{R}@{_}{g}{i}VERSION{_}][{R}:{_}{g}{i}CONFIG{_}]{g}{i}...{_}
+  Configure and build a local repository. A specific configuration can be
+  requested. With -i, also install if build is successful. --skip-configure
+  builds without configuring (useful for rebuilds). With --patches DIR,
+  apply local patches from DIR after checkout and before configuring.
+
+{W}Patches{_}
+
+The --patches option, available on fetch, build, and install, points to a
+local directory of file overrides for one or more repositories. Inside DIR,
+files are organized by repository as {g}{i}DIR{_}/{g}{i}OWNER{_}/{g}{i}REPO{_}/{g}{i}path/to/file{_};
+each such file is copied over the matching path inside the repository's
+working tree. Patches are always applied after any checkout or pull, since
+those operations reset tracked files and would otherwise erase them, so the
+patched version is guaranteed to be the one actually built.
+
+{W}Important folders{_}
+
+{R}$GITEAPC_HOME{_} or {R}$XDG_DATA_HOME/giteapc{_} or {R}$HOME/.local/share/giteapc{_}
+{W}->{_} {b}{}{_}
+  Storage for GiteaPC repositories.
+{R}$GITEAPC_PREFIX{_} or {R}$HOME/.local{_}
+{W}->{_} {b}{}{_}
+  Default install prefix.
+""".format(REPO_FOLDER, PREFIX_FOLDER, **colors()).strip()
+
+def usage(exitcode=None):
+    print(usage_string, file=sys.stderr)
+    if exitcode is not None:
+        sys.exit(exitcode)
+
+commands = {
+    "list": {
+        "function": giteapc.repo._list,
+        "args": "remote:-r,--remote",
+    },
+    "fetch": {
+        "function": giteapc.repo.fetch,
+        "args": "use_ssh:--ssh use_https:--https force:-f,--force "+\
+                "update:-u,--update patches:--patches=",
+    },
+    "show": {
+        "function": giteapc.repo.show,
+        "args": "remote:-r,--remote path:-p,--path-only",
+    },
+    "build": {
+        "function": giteapc.repo.build,
+        "args": "install:-i,--install skip_configure:--skip-configure "+\
+                "patches:--patches=",
+    },
+    "install": {
+        "function": giteapc.repo.install,
+        "args": "use_ssh:--ssh use_https:--https update:-u,--update "+
+                "yes:-y,--yes dry_run:-n,--dry-run patches:--patches=",
+    },
+    "uninstall": {
+        "function": giteapc.repo.uninstall,
+        "args": "keep:-k,--keep",
+    },
+}
+
+def main(argv, commands):
+    # Help, version, and invocations without a proper command name
+    if "-h" in argv or "--help" in argv:
+        usage(0)
+    if "-v" in argv or "--version" in argv:
+        print(f"GiteaPC {VERSION}")
+        return 0
+    if argv == [] or argv[0] not in commands:
+        usage(1)
+
+    args = commands[argv[0]].get("args","").split()
+    args = [x.split(":",1) for x in args]
+    args = [(name,forms.split(",")) for name, forms in args]
+
+    single = ""
+    double = []
+    for name, forms in args:
+        for f in forms:
+            if f.startswith("--"):
+                double.append(f[2:])
+            elif f[0] == "-" and len(f) == 2:
+                single += f[1]
+            else:
+                raise Exception("invalid argument format o(x_x)o")
+
+    # Parse arguments
+    try:
+        opts, data = getopt.gnu_getopt(argv[1:], single, double)
+        opts = { name: True if val == "" else val for (name,val) in opts }
+    except getopt.GetoptError as e:
+        return fatal(e)
+
+    options = {}
+    for (o,val) in opts.items():
+        for (name, forms) in args:
+            # `forms` entries for value-taking long options keep the
+            # trailing "=" from the command table (e.g. "--patches="),
+            # but getopt.gnu_getopt returns the option without it (e.g.
+            # "--patches"). Strip it before comparing, otherwise the
+            # match always fails and the option's value is silently
+            # dropped, leaving the kwarg at its default.
+            if o in [f.rstrip("=") for f in forms]:
+                options[name] = val
+
+    try:
+        return commands[argv[0]]["function"](*data, **options)
+    except Error as e:
+        return fatal(e)
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:], commands))
